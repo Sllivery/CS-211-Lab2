@@ -73,8 +73,13 @@ void mydtrsv(char UPLO, double *A, double *B, int n, int *ipiv)
  **/
 void mydgemm(double *A, double *B, double *C, int n, int i, int j, int k, int b)
 {
+    /* A, B and C are n x n matrices.
+    /* This function computes C[:i,:j]+=A[:i,:k]*B[:k,:j] (the first i rows and k columuns of A multiplies the first k rows and j columuns of B added to the the first i rows and j columuns of C)
+    /* b is the "block size" used in the dgemm.
+    /* In fact this function won't be directly called in the tester code, so you can modify the declaration (parameter list) of mydgemm() if needed. 
+    /* you may copy the code from the optimal() function or any of the other functions in your lab1 code (optimized code recommended).*/
     /* add your code here */
-    /* please just copy from your lab1 function optimal( ... ) */
+    
     return;
 }
 
