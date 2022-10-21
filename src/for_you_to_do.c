@@ -71,6 +71,7 @@ int get_block_size(){
 }
 
 //The matrix multiplication function used in blocked GEPP.
+// You need to let the mydgemm adapt to non-square inputs.
 void mydgemm(double *A, double *B, double *C, int n, int i, int j, int k, int b)
 {
     /* A, B and C are n x n matrices.
