@@ -1,11 +1,6 @@
 #include "../include/for_you_to_do.h"
 
-int get_block_size(){
-    //return the block size you'd like to use 
-    /*add your code here */
-    return 128;
-  
-}
+
 
 /**
  * 
@@ -66,11 +61,16 @@ void mydtrsv(char UPLO, double *A, double *B, int n, int *ipiv)
     return;
 }
 
-/**
- * 
- * Same function as what you used in lab1, cache_part4.c : optimal( ... ).
- * 
- **/
+
+int get_block_size(){
+    //return the block size you use in your matrix multiplication code.
+    /*add your code here, 128 is an example and can be modified. */
+    // With the returned block size the test code will adaptively adjust the input sizes to avoid corner cases.
+    return 128;
+  
+}
+
+//The matrix multiplication function used in blocked GEPP.
 void mydgemm(double *A, double *B, double *C, int n, int i, int j, int k, int b)
 {
     /* A, B and C are n x n matrices.
