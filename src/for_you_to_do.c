@@ -270,7 +270,7 @@ int mydgetrf_block(double *A, int *ipiv, int n, int b)
             }
             else{
                 if (maxIndex != i){
-                    int temps = ipiv[i];
+                    temps = ipiv[i];
                     ipiv[i] = ipiv[maxIndex];
                     ipiv[maxIndex] = temps;
                     memcpy(temp, A + i * n, n * sizeof(double));
@@ -287,15 +287,9 @@ int mydgetrf_block(double *A, int *ipiv, int n, int b)
                 }
             }
         }
-        // update A
+        // update A Computing A=LL-1 A equals solving A_new from LL*A_new = A_old.
         for (i = ib; i < ib + b && i < n; i++){
-            for (j = ib + b; j < n; j++){
-                sum = 0;
-                for (k = ib; k < i; k++){
-                    sum += A[i*n + k] * A[k*n + j];
-                }
-                A[i*n + j] -= sum;
-            }
+            //don't know how to do it
         }
         // calculate the lower right conner matrix use BLAS3
         for (i = ib + b; i < n; i += b){
