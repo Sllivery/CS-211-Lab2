@@ -121,7 +121,6 @@ void mydtrsv(char UPLO, double *A, double *B, int n, int *ipiv)
             y[i] = (B[i] - sum) / A[i*n + i];
         }
     }
-
     memcpy(B, y, sizeof(double) * n);
     free(y);
     return;
@@ -140,12 +139,70 @@ int get_block_size(){
 // You need to let the mydgemm adapt to non-square inputs.
 void mydgemm(double *A, double *B, double *C, int n, int i, int j, int k, int b)
 {
-    /* A, B and C are n x n matrices.
-    /* This function computes C[:i,:j]+=A[:i,:k]*B[:k,:j] (the first i rows and k columuns of A multiplies the first k rows and j columuns of B added to the the first i rows and j columuns of C)
-    /* b is the "block size" used in the dgemm.
-    /* In fact this function won't be directly called in the tester code, so you can modify the declaration (parameter list) of mydgemm() if needed. 
-    /* you may copy the code from the optimal() function or any of the other functions in your lab1 code (optimized code recommended).*/
-    /* add your code here */
+    int i1, j1, k1;
+    /* B x B mini matrix multiplications */
+    for (i1 = i; (i1 < i + b) && (i1 < n); i1 += 3)
+        for (j1 = j; (j1 < j + b) && (j1 < n); j1 += 3)
+        {
+            int c0 = i1 * n + j1;
+            int c1 = c0 + n;
+            int c2 = c1 + n;
+            register double c00 = C[c0];
+            register double c01 = C[c0 + 1];
+            register double c02 = C[c0 + 2];
+            register double c10 = C[c1];
+            register double c11 = C[c1 + 1];
+            register double c12 = C[c1 + 2];
+            register double c20 = C[c2];
+            register double c21 = C[c2 + 1];
+            register double c22 = C[c2 + 2];
+
+            for (k1 = k; (k1 < k + b) && (k1 < n); k1 += 3)
+            {
+                int a0 = i1 * n + k1;
+                int a1 = a0 + n;
+                int a2 = a1 + n;
+                int b0 = k1 * n + j1;
+                int b1 = b0 + n;
+                int b2 = b1 + n;
+                register double a00 = A[a0];
+                register double a10 = A[a1];
+                register double a20 = A[a2];
+                register double b00 = B[b0]; register double b01 = B[b0 + 1]; register double b02 = B[b0 + 2];
+
+                c00 -= a00 * b00; c01 -= a00 * b01; c02 -= a00 * b02;
+                c10 -= a10 * b00; c11 -= a10 * b01; c12 -= a10 * b02;
+                c20 -= a20 * b00; c21 -= a20 * b01; c22 -= a20 * b02;
+
+                a00 = A[a0 + 1];
+                a10 = A[a1 + 1];
+                a20 = A[a2 + 1];
+                b00 = B[b1]; b01 = B[b1 + 1]; b02 = B[b1 + 2];
+
+                c00 -= a00 * b00; c01 -= a00 * b01; c02 -= a00 * b02;
+                c10 -= a10 * b00; c11 -= a10 * b01; c12 -= a10 * b02;
+                c20 -= a20 * b00; c21 -= a20 * b01; c22 -= a20 * b02;
+
+                a00 = A[a0 + 2];
+                a10 = A[a1 + 2];
+                a20 = A[a2 + 2];
+                b00 = B[b2]; b01 = B[b2 + 1]; b02 = B[b2 + 2];
+
+                c00 -= a00 * b00; c01 -= a00 * b01; c02 -= a00 * b02;
+                c10 -= a10 * b00; c11 -= a10 * b01; c12 -= a10 * b02;
+                c20 -= a20 * b00; c21 -= a20 * b01; c22 -= a20 * b02;
+
+            }
+            C[c0] = c00;
+            C[c0 + 1] = c01;
+            C[c0 + 2] = c02;
+            C[c1] = c10;
+            C[c1 + 1] = c11;
+            C[c1 + 2] = c12;
+            C[c2] = c20;
+            C[c2 + 1] = c21;
+            C[c2 + 2] = c22;
+        }
     
     return;
 }
@@ -180,6 +237,79 @@ void mydgemm(double *A, double *B, double *C, int n, int i, int j, int k, int b)
  **/
 int mydgetrf_block(double *A, int *ipiv, int n, int b) 
 {
+    int ib, i, j, k, maxind;
+    double max, sum;
+    double *tempv = (double*)malloc(sizeof(double) * n);
+
+    for (ib = 0; ib < (n - 1); ib += b)
+    {
+        for (i = ib; i < ib + b && i < n; i++)
+        {
+            // pivoting
+            maxind = i;
+            max = fabs(A[i*n + i]);
+
+            for (j = i + 1; j < n; j++)
+            {
+                if (fabs(A[j*n + i]) > max)
+                {
+                    maxind = j;
+                    max = fabs(A[j*n + i]);
+                }
+            }
+            if (max == 0)
+            {
+                return -1;
+            }
+            else
+            {
+                if (maxind != i)
+                {
+                    // save pivoting information
+                    int temp = ipiv[i];
+                    ipiv[i] = ipiv[maxind];
+                    ipiv[maxind] = temp;
+                    // swap rows
+                    memcpy(tempv, A + i * n, n * sizeof(double));
+                    memcpy(A + i * n, A + maxind * n, n * sizeof(double));
+                    memcpy(A + maxind * n, tempv, n * sizeof(double));
+                }
+            }
+
+            // factorization
+            for (j = i + 1; j < n; j++)
+            {
+                A[j*n + i] = A[j*n + i] / A[i*n + i];
+                for (k = i + 1; k < ib + b && k < n; k++)
+                {
+                    A[j*n + k] -= A[j*n + i] * A[i*n + k];
+                }
+            }
+        }
+
+        // update A(ib:end, end+1:n)
+        for (i = ib; i < ib + b && i < n; i++)
+        {
+            for (j = ib + b; j < n; j++)
+            {
+                sum = 0;
+                for (k = ib; k < i; k++)
+                {
+                    sum += A[i*n + k] * A[k*n + j];
+                }
+                A[i*n + j] -= sum;
+            }
+        }
+
+        // update A(end+1:n, end+1:n)
+        for (i = ib + b; i < n; i += b)
+        {
+            for (j = ib + b; j < n; j += b)
+            {
+                mydgemm(A, A, A, n, i, j, ib, b);
+            }
+        }
+    }
     return 0;
 }
 
