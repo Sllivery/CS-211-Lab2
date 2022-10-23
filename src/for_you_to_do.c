@@ -23,7 +23,48 @@
 
 int mydgetrf(double *A, int *ipiv, int n) 
 {
-    /* add your code here */
+    register int i, t, j, k, maxIndex, temps;
+    register double max;
+    register double *temp = (double*)malloc(sizeof(double) * n);
+    //outer loop to control the row
+    for (i = 0; i < n - 1; i++)
+    {
+        // pivoting
+        // select the row that has max value in a column
+        maxIndex = i;
+        max = fabs(A[i * n + i]);
+        for (t = i + 1; t < n; t++){
+            if (fabs(A[t * n + i]) > max){
+                maxIndex = t;
+                max = fabs(A[t * n + i]);
+            }
+        }
+        if (max == 0){
+            // cannot operate a singular matrix
+            return -1;
+        }
+        else{
+            if (maxIndex != i){
+                // save pivoting information
+                temps = ipiv[i];
+                ipiv[i] = ipiv[maxIndex];
+                ipiv[maxIndex] = temps;
+                // swap rows
+                memcpy(temp, A + i * n, n * sizeof(double));
+                memcpy(A + i * n, A + maxIndex * n, n * sizeof(double));
+                memcpy(A + maxIndex * n, temp, n * sizeof(double));
+            }
+        }
+
+        // factorization
+        for (j = i + 1; j < n; j++){
+            A[j * n + i] = A[j * n + i] / A[i * n + i];
+            for (k = i + 1; k < n; k++){
+                A[j * n + k] -= A[j  *n + i] * A[i * n + k];
+            }
+        }
+    }
+    free(temp);
 
     return 0;
 }
@@ -57,7 +98,32 @@ int mydgetrf(double *A, int *ipiv, int n)
  **/
 void mydtrsv(char UPLO, double *A, double *B, int n, int *ipiv)
 {
-    /* add your code here */
+    register int i, j;
+    register double sum;
+    register double *y = (double*)malloc(n * sizeof(double));
+    if (UPLO == 'L'){
+        y[0] = B[ipiv[0]];
+        for (i = 1; i < n; i++){
+            sum = 0;
+            for (j = 0; j < i; j++){
+                sum += y[j] * A[i*n + j];
+            }
+            y[i] = B[ipiv[i]] - sum;
+        }
+    }
+    else if (UPLO == 'U'){
+        y[n - 1] = B[n - 1] / A[(n - 1)*n + n - 1];
+        for (i = n - 2; i >= 0; i--){
+            sum = 0;
+            for (j = i + 1; j < n; j++){
+                sum += y[j] * A[i*n + j];
+            }
+            y[i] = (B[i] - sum) / A[i*n + i];
+        }
+    }
+
+    memcpy(B, y, sizeof(double) * n);
+    free(y);
     return;
 }
 
